@@ -1,16 +1,33 @@
-# React + Vite
+# Proyecto FrontCogni - Guía rápida
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 1. Crear proyecto con Vite + React
+npm create vite@latest . -- --template react
 
-Currently, two official plugins are available:
+# Durante la configuración:
+# - Nombre del paquete: frontcogni
+# - Framework: React
+# - Variante: JavaScript
+# - Instalar dependencias: Yes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 2. Instalar dependencias adicionales
+npm install react-router-dom
+npm install axios
+npm install tailwindcss @tailwindcss/vite
 
-## React Compiler
+## 3. Ejecutar servidor de desarrollo
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# El servidor se levantará en:
+# ➜ Local:   http://localhost:5173/
+# ➜ Network: use --host to expose
 
-## Expanding the ESLint configuration
+## 4. Errores comunes
+- Si aparece "Expected corresponding JSX closing tag":
+  Revisa que todos los <div>, <main>, etc. tengan su cierre correcto.
+- Si aparece "Unexpected token }":
+  Verifica que no haya llaves sobrantes en el JSX.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 5. Notas
+- Usa `npm fund` para ver paquetes que buscan financiamiento.
+- Usa `npm audit` para revisar vulnerabilidades.
+- Si algún directorio queda bloqueado (EBUSY), reinicia el terminal o cierra procesos que usen esos archivos.
