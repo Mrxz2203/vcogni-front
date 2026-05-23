@@ -166,32 +166,43 @@ function Calibracion({ onTerminar, onCancelar }) {
   const webgazerRef = useRef(null)
 
   useEffect(() => {
-    let wg = null
+  let wg = null
 
-    const iniciar = async () => {
-      try {
-        const webgazer = await import('webgazer')
-        wg = webgazer.default
-        await wg
-          .setRegression('ridge')
-          .setTracker('TFFacemesh')
-          .setGazeListener(() => {})
-          .begin()
-        wg.showVideoPreview(true)
-        wg.showPredictionPoints(false)
-        webgazerRef.current = wg
-        setWebgazerListo(true)
-      } catch (err) {
-        console.error('Error WebGazer:', err)
-      }
+  const iniciar = async () => {
+    try {
+      const webgazer = await import('webgazer')
+      wg = webgazer.default
+
+      wg.setRegression('ridge')
+      wg.setTracker('TFFacemesh')
+      wg.setGazeListener(() => {})
+      wg.begin()
+
+      setTimeout(() => {
+        if (wg) {
+          try { wg.showVideoPreview(true) } catch(e) {}
+          try { wg.showPredictionPoints(false) } catch(e) {}
+          webgazerRef.current = wg
+          setWebgazerListo(true)
+        }
+      }, 3000)
+
+    } catch (err) {
+      console.error('Error WebGazer:', err)
+      setWebgazerListo(true)
     }
+  }
 
-    iniciar()
+  iniciar()
 
-    return () => {
-      if (wg) try { wg.end() } catch (e) {}
-    }
-  }, [])
+ return () => {
+  // NO llamar wg.end() aquí — WebGazer debe seguir corriendo para la sesión
+  if (wg) {
+    try { wg.showVideoPreview(false) } catch(e) {}
+  }
+}
+}, [])
+
 
   const handleClickPunto = (idx) => {
     if (idx !== puntoActual || !webgazerListo) return
@@ -330,6 +341,64 @@ function Calibracion({ onTerminar, onCancelar }) {
   )
 }
 
+function cerrarCamara(wg, stream) {
+  try {
+    if (wg) {
+      wg.showPredictionPoints(false)
+      wg.clearGazeListener()
+      wg.end()
+    }
+  } catch (e) {}
+
+  // Detener tracks directamente del elemento video en el DOM
+  try {
+    const video = document.getElementById('webgazerVideoFeed')
+    if (video && video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop())
+      video.srcObject = null
+    }
+  } catch (e) {}
+
+  // Eliminar el contenedor de WebGazer
+  try {
+    const container = document.getElementById('webgazerVideoContainer')
+    if (container) container.remove()
+  } catch (e) {}
+}
+
+function finalizarSesionHelper(gazeData) {
+  if (gazeData.length < 2) return { fijaciones: 0, sacadas: 0, duracionMedia: 0 }
+
+  let fijaciones = 0
+  let sacadas = 0
+  let duraciones = []
+  let inicioFijacion = gazeData[0]?.t || 0
+
+  for (let i = 1; i < gazeData.length; i++) {
+    const dx = gazeData[i].x - gazeData[i - 1].x
+    const dy = gazeData[i].y - gazeData[i - 1].y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (dist < 50) {
+      if (i === gazeData.length - 1) {
+        fijaciones++
+        duraciones.push(gazeData[i].t - inicioFijacion)
+      }
+    } else {
+      sacadas++
+      fijaciones++
+      duraciones.push(gazeData[i].t - inicioFijacion)
+      inicioFijacion = gazeData[i].t
+    }
+  }
+
+  const duracionMedia = duraciones.length > 0
+    ? Math.round(duraciones.reduce((a, b) => a + b, 0) / duraciones.length)
+    : 0
+
+  return { fijaciones, sacadas, duracionMedia }
+}
+
 // ─── SESIÓN ACTIVA CON WEBGAZER ───────────────────────
 function Sesion({ onTerminar, onCancelar }) {
   const [tiempo, setTiempo] = useState(0)
@@ -338,59 +407,70 @@ function Sesion({ onTerminar, onCancelar }) {
   const gazeRef = useRef([])
   const webgazerRef = useRef(null)
   const timerRef = useRef(null)
+   const streamRef2 = useRef(null) 
 
-  useEffect(() => {
-    let wg = null
+ useEffect(() => {
+  const iniciar = async () => {
+    try {
+      const webgazer = await import('webgazer')
+      const wg = webgazer.default
 
-    const iniciar = async () => {
-      try {
-        const webgazer = await import('webgazer')
-        wg = webgazer.default
-
-        wg.setGazeListener((data, timestamp) => {
-          if (data) {
-            gazeRef.current.push({ x: data.x, y: data.y, t: timestamp })
-            setPuntosCapturados(prev => prev + 1)
-          }
-        })
-
-        wg.showVideoPreview(false)
-        wg.showPredictionPoints(true)
-        webgazerRef.current = wg
-      } catch (err) {
-        console.error('Error sesión WebGazer:', err)
-      }
-    }
-
-    iniciar()
-
-    timerRef.current = setInterval(() => {
-      setTiempo(prev => {
-        if (prev + 1 >= DURACION_SESION) {
-          clearInterval(timerRef.current)
-          finalizarSesion()
-          return DURACION_SESION
+      // WebGazer ya está corriendo desde calibración, solo actualizamos
+      wg.setGazeListener((data, timestamp) => {
+        if (data) {
+          gazeRef.current.push({ x: data.x, y: data.y, t: timestamp })
+          setPuntosCapturados(prev => prev + 1)
         }
-        return prev + 1
       })
-    }, 1000)
 
-    return () => {
-      clearInterval(timerRef.current)
-      if (wg) {
-        try {
-          wg.showPredictionPoints(false)
-          wg.clearGazeListener()
-        } catch (e) {}
-      }
+      try { wg.showVideoPreview(true) } catch(e) {}
+      try { wg.showPredictionPoints(true) } catch(e) {}
+      webgazerRef.current = wg
+
+    } catch (err) {
+      console.error('Error sesión WebGazer:', err)
     }
-  }, [])
-
-  const finalizarSesion = () => {
-    const metricas = calcularMetricas(gazeRef.current)
-    setShowModal(true)
-    setTimeout(() => onTerminar(metricas), 3000)
   }
+
+  iniciar()
+  // Esperar a que WebGazer inyecte el video y mostrarlo
+const mostrarVideo = () => {
+  const container = document.getElementById('webgazerVideoContainer')
+  if (container) {
+    container.style.display = 'block'
+    container.style.visibility = 'visible'
+    container.style.opacity = '1'
+  } else {
+    setTimeout(mostrarVideo, 500)
+  }
+}
+setTimeout(mostrarVideo, 1000)
+
+
+
+  timerRef.current = setInterval(() => {
+    setTiempo(prev => {
+      if (prev + 1 >= DURACION_SESION) {
+        clearInterval(timerRef.current)
+        finalizarSesion()
+        return DURACION_SESION
+      }
+      return prev + 1
+    })
+  }, 1000)
+
+  return () => {
+    clearInterval(timerRef.current)
+    cerrarCamara(webgazerRef.current, null)
+  }
+}, [])
+
+ const finalizarSesion = () => {
+  const metricas = finalizarSesionHelper(gazeRef.current)
+  cerrarCamara(webgazerRef.current, null)
+  setShowModal(true)
+  setTimeout(() => onTerminar(metricas), 3000)
+}
 
   const calcularMetricas = (datos) => {
     if (datos.length < 2) return { fijaciones: 0, sacadas: 0, duracionMedia: 0 }

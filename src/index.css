@@ -1,1 +1,23 @@
 @import "tailwindcss";
+#webgazerVideoFeed,
+#webgazerFaceOverlay,
+#webgazerFaceFeedbackBox,
+#webgazerGazeDot {
+  pointer-events: none !important;
+}
+#webgazerVideoContainer {
+  top: auto !important;
+  bottom: 20px !important;
+  left: 20px !important;
+  width: 160px !important;
+  height: 120px !important;
+  opacity: 1 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  z-index: 999 !important;
+}
+
+#webgazerVideoFeed {
+  width: 160px !important;
+  height: 120px !important;
+}
