@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import cogni from '../assets/cogni.png'
+import { useAuth } from '../context/AuthContext'
 
 export default function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const [showModal, setShowModal] = useState(false)
+  const { logout } = useAuth()
 
   const links = [
     { path: '/estudiante/inicio',    label: 'Inicio',             icon: '🏠' },
@@ -15,7 +17,7 @@ export default function Sidebar() {
   ]
 
   const handleCerrarSesion = () => {
-    // Aquí se limpiará el token cuando conectemos el backend
+    logout()
     navigate('/')
   }
 

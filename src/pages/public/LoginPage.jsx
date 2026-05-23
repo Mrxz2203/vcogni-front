@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import cogni from '../../assets/cogni.png'
 import loginImg from '../../assets/login.png'
+import { useAuth } from '../../context/AuthContext'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -14,11 +15,18 @@ export default function LoginPage() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log(form)
-    navigate('/estudiante/inicio')
+  const { login } = useAuth()
+
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  try {
+    const rol = await login(form.codigo, form.contrasena)
+    if (rol === 'estudiante') navigate('/estudiante/inicio')
+    else if (rol === 'docente') navigate('/docente/inicio')
+  } catch (err) {
+    alert('Código o contraseña incorrectos')
   }
+}
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#E1F5EE' }}>

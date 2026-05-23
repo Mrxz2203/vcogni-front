@@ -1,19 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import EstudianteLayout from '../../components/EstudianteLayout'
+import { useAuth } from '../../context/AuthContext'
+import { perfilAPI } from '../../services/api'
+
 
 export default function PerfilPage() {
   const navigate = useNavigate()
   const [editando, setEditando] = useState(false)
   const [guardado, setGuardado] = useState(false)
 
-  const [form, setForm] = useState({
-    nombre: 'Ana García',
-    codigo: 'U202021484',
-    carrera: 'ingenieria_sistemas',
-    contrasenaActual: '',
-    contrasenaNueva: '',
-  })
+  const { usuario } = useAuth()
+
+const [form, setForm] = useState({
+  nombre: '',
+  codigo: '',
+  carrera: '',
+  contrasenaActual: '',
+  contrasenaNueva: '',
+})
+
+// Cargar datos reales del backend
+useEffect(() => {
+  if (usuario?.id) {
+    perfilAPI(usuario.id)
+      .then(res => {
+        setForm(prev => ({
+          ...prev,
+          nombre: res.data.nombre,
+          codigo: res.data.codigo,
+          carrera: res.data.carrera || 'ingenieria_sistemas'
+        }))
+      })
+      .catch(err => console.error(err))
+  }
+}, [usuario])
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value })

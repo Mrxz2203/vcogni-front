@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import cogni from '../../assets/cogni.png'
 import registerImg from '../../assets/register.png'
+import { useAuth } from '../../context/AuthContext'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -17,10 +18,24 @@ export default function RegisterPage() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log({ rol, ...form })
+  const { registro } = useAuth()
+
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  try {
+    await registro({
+      nombre: form.nombre,
+      codigo: form.codigo,
+      password: form.contrasena,
+      rol: rol,
+      carrera: form.carrera || null
+    })
+    alert('Registro exitoso. Ahora inicia sesión.')
+    navigate('/login')
+  } catch (err) {
+    alert('Error al registrarse. El código ya puede estar en uso.')
   }
+}
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#E1F5EE' }}>
